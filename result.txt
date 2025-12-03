@@ -1,0 +1,29 @@
+================================================================================
+Wasabi Downloader Execution Log
+Started at: 2025-12-03 15:22:46
+================================================================================
+
+[2025-12-03 15:22:47.001] INFO: Starting command: list_files
+[2025-12-03 15:22:47.002] DEBUG: Arguments: {'command': 'list_files', 'source': ''}
+[2025-12-03 15:22:47.002] INFO: Loading configuration from: C:\gemini\BC1\config.csv
+[2025-12-03 15:22:47.002] DEBUG: Loading configuration from: C:\gemini\BC1\config.csv
+[2025-12-03 15:22:47.047] DEBUG: CSV file loaded successfully, 6 rows found
+[2025-12-03 15:22:47.047] DEBUG: Configuration dictionary created with 6 entries
+[2025-12-03 15:22:47.047] DEBUG: All required keys present: aws_access_key_id, aws_secret_access_key, endpoint_url, bucket_name
+[2025-12-03 15:22:47.047] DEBUG: MFA serial number: Configured
+[2025-12-03 15:22:47.047] DEBUG: SSL verify path:  (optional)
+[2025-12-03 15:22:47.047] DEBUG: Configuration loaded and validated successfully
+[2025-12-03 15:22:47.047] DEBUG: Configuration loaded successfully
+[2025-12-03 15:22:47.047] Connecting to Wasabi...
+[2025-12-03 15:22:47.047] DEBUG: Creating S3 client session
+[2025-12-03 15:22:47.047] DEBUG: Using custom SSL certificate:  (optional)
+[2025-12-03 15:22:49.307] DEBUG: S3 client created for endpoint: https://s3.wasabisys.com
+[2025-12-03 15:22:49.307] Connection successful.
+[2025-12-03 15:22:49.307] DEBUG: Using bucket: YOUR_BUCKET_NAME
+[2025-12-03 15:22:49.307] Listing files in: 'bucket root'
+[2025-12-03 15:22:49.307] DEBUG: Listing objects with prefix: '' in bucket: YOUR_BUCKET_NAME
+[2025-12-03 15:22:57.115] ERROR: An unexpected error occurred: SSL validation failed for https://s3.wasabisys.com/YOUR_BUCKET_NAME?list-type=2&prefix=&encoding-type=url [Errno 2] No such file or directory
+
+================================================================================
+Execution ended at: 2025-12-03 15:22:57
+================================================================================
