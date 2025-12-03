@@ -5,3 +5,4 @@ endpoint_url,https://s3.wasabisys.com
 bucket_name,YOUR_BUCKET_NAME
 mfa_serial_number,YOUR_MFA_SERIAL_NUMBER_ARN (optional)
 ssl_verify_path, (optional)
+sts_endpoint_url,https://sts.wasabisys.com

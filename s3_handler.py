@@ -29,7 +29,7 @@ def get_s3_client(config: Dict[str, str], mfa_token: Optional[str] = None):
             sts_client = boto3.client('sts',
                 aws_access_key_id=config['aws_access_key_id'],
                 aws_secret_access_key=config['aws_secret_access_key'],
-                endpoint_url='https://sts.wasabisys.com'
+                endpoint_url=config['sts_endpoint_url']
             )
 
             token = sts_client.get_session_token(

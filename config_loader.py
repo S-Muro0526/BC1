@@ -44,7 +44,8 @@ def load_config(config_path: str = 'config.csv') -> Dict[str, str]:
         'aws_access_key_id',
         'aws_secret_access_key',
         'endpoint_url',
-        'bucket_name'
+        'bucket_name',
+        'sts_endpoint_url'
     ]
 
     missing_keys = [key for key in required_keys if key not in config or pd.isna(config[key])]
