@@ -15,12 +15,19 @@ def get_mfa_session_token(config: Dict[str, str], mfa_token: str) -> Dict[str, A
     Requests a temporary session token from STS using MFA.
     """
     logger.log_debug("Requesting STS session token with MFA")
-    sts_client = boto3.client('sts',
-        aws_access_key_id=config['aws_access_key_id'],
-        aws_secret_access_key=config['aws_secret_access_key'],
-        endpoint_url=config['sts_endpoint_url'],
-        region_name='us-east-1'
-    )
+
+    sts_params = {
+        'aws_access_key_id': config['aws_access_key_id'],
+        'aws_secret_access_key': config['aws_secret_access_key'],
+        'endpoint_url': config['sts_endpoint_url'],
+        'region_name': 'us-east-1'
+    }
+
+    if config.get('ssl_verify_path'):
+        logger.log_debug(f"Using custom SSL certificate for STS: {config['ssl_verify_path']}")
+        sts_params['verify'] = config['ssl_verify_path']
+
+    sts_client = boto3.client('sts', **sts_params)
 
     token = sts_client.get_session_token(
         SerialNumber=config['mfa_serial_number'],
