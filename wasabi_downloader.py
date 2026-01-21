@@ -72,6 +72,9 @@ def main():
         parser_list = subparsers.add_parser('list_files', help='Recursively list files in a given prefix.')
         parser_list.add_argument('--source', default='', help='The source directory (prefix) to list. Defaults to the entire bucket.')
 
+        # --- mfa ---
+        subparsers.add_parser('mfa', help='Authenticate with MFA and save session.')
+
         args = parser.parse_args()
         
         logger.log_info(f"Starting command: {args.command}")
@@ -85,14 +88,28 @@ def main():
             logger.log_debug(f"Configuration loaded successfully")
 
             # 2. Handle MFA
-            mfa_token = None
-            if config.get('mfa_serial_number') and config['mfa_serial_number'] != 'YOUR_MFA_SERIAL_NUMBER_ARN (optional)':
-                logger.log_info("MFA authentication required")
+            session_file = os.path.join(get_app_root(), '.mfa_session.json')
+            session_data = None
+            mfa_required = config.get('mfa_serial_number') and config['mfa_serial_number'] != 'YOUR_MFA_SERIAL_NUMBER_ARN (optional)'
+
+            if args.command == 'mfa':
+                if not mfa_required:
+                    logger.log("MFA is not configured in config.env. Skip authentication.")
+                    return
                 mfa_token = getpass.getpass("Enter MFA Token: ")
+                credentials = s3_handler.get_mfa_session_token(config, mfa_token)
+                s3_handler.save_session(credentials, session_file)
+                logger.log("MFA authentication successful. Session saved.")
+                return
+
+            if mfa_required:
+                session_data = s3_handler.load_session(session_file)
+                if not s3_handler.is_session_valid(session_data):
+                    raise ValueError("MFAセッションが期限切れか、実行されていません。'mfa'コマンドを先に実行してください。")
 
             # 3. Get S3 Client
             logger.log("Connecting to Wasabi...")
-            s3_client = s3_handler.get_s3_client(config, mfa_token)
+            s3_client = s3_handler.get_s3_client(config, session_data=session_data)
             logger.log("Connection successful.")
 
             bucket_name = config['bucket_name']
