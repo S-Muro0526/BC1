@@ -4,14 +4,13 @@
 
 本ツールは、Wasabi Hot Cloud Storage (Wasabi) からファイルをダウンロードするためのPython製コマンドラインツールです。
 
-主な機能として、単一ファイルのダウンロード、ディレクトリ単位の一括ダウンロード、そして指定した過去の時点でのファイルバージョンの一括取得を提供します。設定は外部の`config.csv`ファイルから読み込まれ、オプションでMFA（多要素認証）にも対応しています。
+主な機能として、単一ファイルのダウンロード、ディレクトリ単位の一括ダウンロード、そして指定した過去の時点でのファイルバージョンの一括取得を提供します。設定は外部の`config.env`ファイルから読み込まれ、オプションでMFA（多要素認証）にも対応しています。
 
 ## 2. 必要なライブラリ
 
 本ツールを実行するには、以下のPythonライブラリが必要です。
 
 - `boto3`: AWS SDK for Python (WasabiはS3互換APIを提供)
-- `pandas`: 設定ファイル(`config.csv`)の読み込みに使用
 - `tqdm`: ダウンロードの進捗状況をプログレスバーで表示するために使用
 
 以下のコマンドで、必要なライブラリをすべてインストールできます。
@@ -22,15 +21,16 @@ pip install -r requirements.txt
 
 ## 3. セットアップ
 
-ツールの実行前に、`config.csv`ファイルに必要な情報を設定する必要があります。
+ツールの実行前に、`config.env`ファイルに必要な情報を設定する必要があります。
 
-```csv
-key,value
-aws_access_key_id,YOUR_ACCESS_KEY
-aws_secret_access_key,YOUR_SECRET_KEY
-endpoint_url,https://s3.wasabisys.com
-bucket_name,YOUR_BUCKET_NAME
-mfa_serial_number,YOUR_MFA_SERIAL_NUMBER_ARN (optional)
+```env
+aws_access_key_id=YOUR_ACCESS_KEY
+aws_secret_access_key=YOUR_SECRET_KEY
+endpoint_url=https://s3.wasabisys.com
+bucket_name=YOUR_BUCKET_NAME
+mfa_serial_number=YOUR_MFA_SERIAL_NUMBER_ARN (optional)
+ssl_verify_path= (optional)
+sts_endpoint_url=https://sts.wasabisys.com
 ```
 
 | key | 説明 |
@@ -44,7 +44,7 @@ mfa_serial_number,YOUR_MFA_SERIAL_NUMBER_ARN (optional)
 
 ### 3.1. MFA認証について
 
-`config.csv` ファイルで `mfa_serial_number` に有効なARNを設定すると、ツールの実行時に自動的にMFA認証が要求されます。
+`config.env` ファイルで `mfa_serial_number` に有効なARNを設定すると、ツールの実行時に自動的にMFA認証が要求されます。
 プログラムを実行すると、コンソールに以下のようなプロンプトが表示されます。
 
 ```bash
@@ -59,11 +59,11 @@ Enter MFA Token:
 企業内プロキシなどを経由して通信を行う際、SSLインスペクション（通信の復号・再暗号化）が行われることがあります。
 このような環境では、`SSL validation failed` というエラーが発生する場合があります。
 
-この問題を解決するには、プロキシが使用するカスタムSSL証明書（通常は`.pem`形式）のフルパスを`config.csv`の`ssl_verify_path`に設定してください。
+この問題を解決するには、プロキシが使用するカスタムSSL証明書（通常は`.pem`形式）のフルパスを`config.env`の`ssl_verify_path`に設定してください。
 
 **設定例:**
-```csv
-ssl_verify_path,C:\certs\my-proxy-ca.pem
+```env
+ssl_verify_path=C:\certs\my-proxy-ca.pem
 ```
 
 ## 4. 使用方法
@@ -163,9 +163,9 @@ Started at: 2025-12-03 15:22:46
 
 [2025-12-03 15:22:47.001] INFO: Starting command: list_files
 [2025-12-03 15:22:47.002] DEBUG: Arguments: {'command': 'list_files', 'source': ''}
-[2025-12-03 15:22:47.002] INFO: Loading configuration from: C:\gemini\BC1\config.csv
-[2025-12-03 15:22:47.002] DEBUG: Loading configuration from: C:\gemini\BC1\config.csv
-[2025-12-03 15:22:47.047] DEBUG: CSV file loaded successfully, 6 rows found
+[2025-12-03 15:22:47.002] INFO: Loading configuration from: C:\gemini\BC1\config.env
+[2025-12-03 15:22:47.002] DEBUG: Loading configuration from: C:\gemini\BC1\config.env
+[2025-12-03 15:22:47.047] DEBUG: ENV file loaded successfully, 7 entries found
 [2025-12-03 15:22:47.047] DEBUG: Configuration loaded successfully
 [2025-12-03 15:22:47.047] Connecting to Wasabi...
 [2025-12-03 15:22:47.047] DEBUG: Creating S3 client session
