@@ -1,4 +1,3 @@
-import pandas as pd
 import os
 import sys
 from typing import Dict, Optional
@@ -7,14 +6,14 @@ from typing import Dict, Optional
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 import logger
 
-def load_config(config_path: str = 'config.csv') -> Dict[str, str]:
+def load_config(config_path: str = 'config.env') -> Dict[str, str]:
     """
-    Reads the configuration from a CSV file and returns it as a dictionary.
+    Reads the configuration from an ENV file and returns it as a dictionary.
 
-    The CSV file must have two columns: 'key' and 'value'.
+    The ENV file should have 'key=value' format.
 
     Args:
-        config_path: The path to the configuration CSV file.
+        config_path: The path to the configuration ENV file.
 
     Returns:
         A dictionary containing the configuration settings.
@@ -24,20 +23,25 @@ def load_config(config_path: str = 'config.csv') -> Dict[str, str]:
         ValueError: If the config file is invalid (e.g., missing required keys).
     """
     logger.log_debug(f"Loading configuration from: {config_path}")
+    config = {}
     try:
-        df = pd.read_csv(config_path)
-        logger.log_debug(f"CSV file loaded successfully, {len(df)} rows found")
+        with open(config_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    config[key.strip()] = value.strip()
+                else:
+                    logger.log_warning(f"Skipping invalid line {line_num} in {config_path}: {line}")
+        logger.log_debug(f"ENV file loaded successfully, {len(config)} entries found")
     except FileNotFoundError:
         logger.log_error(f"Configuration file not found at '{config_path}'")
         raise FileNotFoundError(f"Error: Configuration file not found at '{config_path}'")
-
-    if 'key' not in df.columns or 'value' not in df.columns:
-        logger.log_error("Invalid config file: Must contain 'key' and 'value' columns")
-        raise ValueError("Invalid config file: Must contain 'key' and 'value' columns.")
-
-    # Convert the two-column DataFrame to a dictionary
-    config = pd.Series(df.value.values, index=df.key).to_dict()
-    logger.log_debug(f"Configuration dictionary created with {len(config)} entries")
+    except Exception as e:
+        logger.log_error(f"Error reading configuration file: {e}")
+        raise
 
     # Validate required keys
     required_keys = [
@@ -48,7 +52,7 @@ def load_config(config_path: str = 'config.csv') -> Dict[str, str]:
         'sts_endpoint_url'
     ]
 
-    missing_keys = [key for key in required_keys if key not in config or pd.isna(config[key])]
+    missing_keys = [key for key in required_keys if key not in config or not config[key]]
     if missing_keys:
         logger.log_error(f"Missing required configuration keys: {', '.join(missing_keys)}")
         raise ValueError(f"Missing required configuration keys: {', '.join(missing_keys)}")
@@ -56,14 +60,14 @@ def load_config(config_path: str = 'config.csv') -> Dict[str, str]:
     logger.log_debug(f"All required keys present: {', '.join(required_keys)}")
 
     # Handle optional mfa_serial_number
-    if 'mfa_serial_number' in config and pd.isna(config['mfa_serial_number']):
+    if 'mfa_serial_number' in config and not config['mfa_serial_number']:
         config['mfa_serial_number'] = None
         logger.log_debug("MFA serial number: Not configured")
     elif 'mfa_serial_number' in config:
         logger.log_debug(f"MFA serial number: Configured")
 
     # Handle optional ssl_verify_path
-    if 'ssl_verify_path' in config and (pd.isna(config['ssl_verify_path']) or not str(config['ssl_verify_path']).strip()):
+    if 'ssl_verify_path' in config and not str(config['ssl_verify_path']).strip():
         config['ssl_verify_path'] = None
         logger.log_debug("SSL verify path: Not configured")
     elif 'ssl_verify_path' in config:

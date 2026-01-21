@@ -79,7 +79,7 @@ def main():
 
         try:
             # 1. Load Configuration
-            config_path = os.path.join(get_app_root(), 'config.csv')
+            config_path = os.path.join(get_app_root(), 'config.env')
             logger.log_info(f"Loading configuration from: {config_path}")
             config = config_loader.load_config(config_path)
             logger.log_debug(f"Configuration loaded successfully")
