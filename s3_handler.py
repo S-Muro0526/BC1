@@ -18,7 +18,8 @@ def get_mfa_session_token(config: Dict[str, str], mfa_token: str) -> Dict[str, A
     sts_client = boto3.client('sts',
         aws_access_key_id=config['aws_access_key_id'],
         aws_secret_access_key=config['aws_secret_access_key'],
-        endpoint_url=config['sts_endpoint_url']
+        endpoint_url=config['sts_endpoint_url'],
+        region_name='us-east-1'
     )
 
     token = sts_client.get_session_token(
