@@ -4,15 +4,97 @@ from typing import Dict, Optional, Callable, Tuple, List, Any
 import os
 import sys
 import datetime
+import json
 
 # Add project root to path for logger import
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 import logger
 
-def get_s3_client(config: Dict[str, str], mfa_token: Optional[str] = None):
+def get_mfa_session_token(config: Dict[str, str], mfa_token: str) -> Dict[str, Any]:
+    """
+    Requests a temporary session token from STS using MFA.
+    """
+    logger.log_debug("Requesting STS session token with MFA")
+
+    sts_params = {
+        'aws_access_key_id': config['aws_access_key_id'],
+        'aws_secret_access_key': config['aws_secret_access_key'],
+        'endpoint_url': config['sts_endpoint_url'],
+        'region_name': 'us-east-1'
+    }
+
+    if config.get('ssl_verify_path'):
+        logger.log_debug(f"Using custom SSL certificate for STS: {config['ssl_verify_path']}")
+        sts_params['verify'] = config['ssl_verify_path']
+
+    sts_client = boto3.client('sts', **sts_params)
+
+    token = sts_client.get_session_token(
+        SerialNumber=config['mfa_serial_number'],
+        TokenCode=mfa_token
+    )
+    logger.log_debug("STS session token obtained successfully")
+    return token['Credentials']
+
+def save_session(credentials: Dict[str, Any], filepath: str):
+    """
+    Saves the temporary credentials to a file in JSON format.
+    """
+    session_data = {
+        'AccessKeyId': credentials['AccessKeyId'],
+        'SecretAccessKey': credentials['SecretAccessKey'],
+        'SessionToken': credentials['SessionToken'],
+        'Expiration': credentials['Expiration'].isoformat() if isinstance(credentials['Expiration'], datetime.datetime) else credentials['Expiration']
+    }
+    with open(filepath, 'w') as f:
+        json.dump(session_data, f)
+    logger.log_debug(f"MFA session saved to {filepath}")
+
+def load_session(filepath: str) -> Optional[Dict[str, Any]]:
+    """
+    Loads temporary credentials from a file.
+    """
+    if not os.path.exists(filepath):
+        logger.log_debug(f"Session file not found at {filepath}")
+        return None
+    try:
+        with open(filepath, 'r') as f:
+            session_data = json.load(f)
+        logger.log_debug(f"MFA session loaded from {filepath}")
+        return session_data
+    except Exception as e:
+        logger.log_error(f"Failed to load MFA session: {e}")
+        return None
+
+def is_session_valid(session_data: Optional[Dict[str, Any]]) -> bool:
+    """
+    Checks if the loaded session is still valid.
+    """
+    if not session_data:
+        return False
+
+    expiration_str = session_data.get('Expiration')
+    if not expiration_str:
+        return False
+
+    try:
+        expiration = datetime.datetime.fromisoformat(expiration_str)
+        # Convert to UTC if it has no timezone info, assuming STS returns UTC
+        if expiration.tzinfo is None:
+            expiration = expiration.replace(tzinfo=datetime.timezone.utc)
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        # Check if expiration is at least 1 minute in the future
+        return expiration > now + datetime.timedelta(minutes=1)
+    except Exception as e:
+        logger.log_error(f"Error validating session expiration: {e}")
+        return False
+
+def get_s3_client(config: Dict[str, str], mfa_token: Optional[str] = None, session_data: Optional[Dict[str, Any]] = None):
     """
     Establishes a session with Wasabi and returns an S3 client.
-    Handles MFA authentication if mfa_serial_number and mfa_token are provided.
+    Handles MFA authentication if mfa_serial_number and mfa_token are provided,
+    or uses provided session_data.
     """
     try:
         logger.log_debug("Creating S3 client session")
@@ -21,24 +103,18 @@ def get_s3_client(config: Dict[str, str], mfa_token: Optional[str] = None):
             "aws_secret_access_key": config['aws_secret_access_key'],
         }
 
-        if config.get('mfa_serial_number') and config['mfa_serial_number'] != 'YOUR_MFA_SERIAL_NUMBER_ARN (optional)':
+        if session_data:
+            logger.log_debug("Using provided session data for S3 client")
+            session_params = {
+                "aws_access_key_id": session_data['AccessKeyId'],
+                "aws_secret_access_key": session_data['SecretAccessKey'],
+                "aws_session_token": session_data['SessionToken'],
+            }
+        elif config.get('mfa_serial_number') and config['mfa_serial_number'] != 'YOUR_MFA_SERIAL_NUMBER_ARN (optional)':
             if not mfa_token:
                 raise ValueError("MFA token is required for authentication.")
 
-            logger.log_debug("Requesting STS session token with MFA")
-            sts_client = boto3.client('sts',
-                aws_access_key_id=config['aws_access_key_id'],
-                aws_secret_access_key=config['aws_secret_access_key'],
-                endpoint_url=config['sts_endpoint_url']
-            )
-
-            token = sts_client.get_session_token(
-                SerialNumber=config['mfa_serial_number'],
-                TokenCode=mfa_token
-            )
-
-            credentials = token['Credentials']
-            logger.log_debug("STS session token obtained successfully")
+            credentials = get_mfa_session_token(config, mfa_token)
             session_params = {
                 "aws_access_key_id": credentials['AccessKeyId'],
                 "aws_secret_access_key": credentials['SecretAccessKey'],
